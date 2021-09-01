@@ -93,26 +93,26 @@ public:
         }
         list <int> listaOffsets;
 
-        int proximoOffset = ultimoRegistro;
+        int proximoOffset = ultimoRegistro; //Offset do ultimo registro da lista invertida
         while(proximoOffset != -1){
-            arquivoListaInvertida.seekg(proximoOffset);
+            arquivoListaInvertida.seekg(proximoOffset); //Vai para a posicao do ultimo registro no arquivo
             string linha;
             string delimitador = "|";
-            getline(arquivoListaInvertida,linha);
-            string offsetDaPalavraString = linha.substr(0, linha.find(delimitador));
-            linha.erase(0, linha.find(delimitador) + delimitador.length());
-            string proximoOffsetString = linha.substr(0, linha.find(delimitador));
+            getline(arquivoListaInvertida,linha); //Pega a linha do registro
+            string offsetDaPalavraString = linha.substr(0, linha.find(delimitador)); // Pega o primeiro valor que sera o offset no arquivo da biblia
+            linha.erase(0, linha.find(delimitador) + delimitador.length()); //Exclui a primeira parte da linha
+            string proximoOffsetString = linha.substr(0, linha.find(delimitador)); //Pega a parte restante que sera o proximo registro
 
-            int offsetDaPalavra = stoi(offsetDaPalavraString);
-            proximoOffset = stoi(proximoOffsetString);
-            listaOffsets.insert(listaOffsets.end(),offsetDaPalavra);
-            *quantidade = *quantidade + 1;
+            int offsetDaPalavra = stoi(offsetDaPalavraString); //Transforma o offset da palavra na bilbia em int (quando lido ele e uma string)
+            proximoOffset = stoi(proximoOffsetString);//Transforma o proximo offset em int (quando lido ele e uma string)
+            listaOffsets.insert(listaOffsets.end(),offsetDaPalavra); //Insere o offset da palavra na lista de offsets
+            *quantidade = *quantidade + 1; //Aumenta em 1 a quantidade de offsets na lista
         }
 
-        offsets = (int*)malloc(sizeof(int)*listaOffsets.size());
-        copy(listaOffsets.begin(),listaOffsets.end(),offsets);
-        arquivoListaInvertida.seekg(posicaoAtual);
-        return offsets;
+        offsets = (int*)malloc(sizeof(int)*listaOffsets.size()); //Aloca o espaco no array de offsets
+        copy(listaOffsets.begin(),listaOffsets.end(),offsets); //Copia os dados da lista de offsets para o array de offsets
+        arquivoListaInvertida.seekg(posicaoAtual); //Devolve o ponteiro do arquivo para a posicao que estava antes da busca
+        return offsets; //Restorna o array de offsets
     }
 private:
     fstream arquivoListaInvertida;
