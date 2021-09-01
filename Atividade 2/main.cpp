@@ -44,48 +44,78 @@ void imprimeLinha(int offset) {
 class listaInvertida {
 public:
     // construtor
-    listaInvertida() { 
+    listaInvertida() {
+        arquivoListaInvertida.open("listaInvertida.txt", fstream::in | fstream::out | fstream::app);
+        if (!arquivoListaInvertida.is_open()){
+        printf("\n\n Nao consegui abrir arquivo listaInvertida.txt. Sinto muito.\n\n\n\n");
+        }
     }
     // destrutor
-    ~listaInvertida() { 
+    ~listaInvertida() {
+        arquivoListaInvertida.close();
     }
     // adiciona palavra na estrutura
     void adiciona(char *palavra, int offset) {
-        int tamanhoPalavra = strlen(palavra) + 1;
-        string buffer = "";
+        int tamanhoPalavra = strlen(palavra) + 1; //Tamanho da palavra + o \0
+        string buffer = ""; //Buffer para transformar a palavra de um array de char para uma string
         for(int i = 0; i<tamanhoPalavra; i++){
             buffer = buffer + palavra[i];
         }
 
-        if(mapIndiceSecundario[buffer] != 0){
-            int ultimoOffset;
-            ultimoOffset = mapIndiceSecundario[buffer];
-            mapIndiceSecundario[buffer] = offset;
-            mapListaInvertida[offset] = ultimoOffset;
+        if(mapIndiceSecundario[buffer] != 0){ //Caso a palavra ja exista
+            int offsetAnterior = mapIndiceSecundario[buffer]; //Posicao atual no indice secundario
+            int offsetListaInvertida = arquivoListaInvertida.tellg(); //Pega a posicao atual do arquivo, ou seja, a posicao onde a palavra sera escrita
+            mapIndiceSecundario[buffer] = offsetListaInvertida; //Coloca na no indice secundario o novo endereco
+            arquivoListaInvertida << offset << "|" << offsetAnterior << "|" << endl; //Escreve no arquivo de lista invertida
         }
-        else{
-            mapIndiceSecundario[buffer] = offset;
-            mapListaInvertida[offset] = -1;
+        else{ //Caso a palavra nao exista no indice ainda
+            int offsetListaInvertida = arquivoListaInvertida.tellg(); //Pega a posicao atual do arquivo, ou seja, a posicao onde a palavra sera escrita
+            mapIndiceSecundario[buffer] = offsetListaInvertida; //Grava essa posicao no indice secundario
+            arquivoListaInvertida << offset << "|" << -1 << "|" << endl; //Escreve no arquivo da lista invertida
         }
     }
     // realiza busca, retornando vetor de offsets que referenciam a palavra
     int * busca(char *palavra, int *quantidade) {
+        int posicaoAtual = arquivoListaInvertida.tellg();
         int tamanhoPalavra = strlen(palavra) + 1;
         string buffer = "";
         for(int i = 0; i<tamanhoPalavra; i++){
             buffer = buffer + palavra[i];
         }
 
-        int offsets[1] = {1};
-        *quantidade = 1;
-        list <int> lista;
+        int ultimoRegistro =  mapIndiceSecundario[buffer];
 
-        cout << mapIndiceSecundario[buffer];
+        int *offsets;
+        *quantidade = 0;
 
+        if(ultimoRegistro == 0){
+            return offsets;
+        }
+        list <int> listaOffsets;
+
+        int proximoOffset = ultimoRegistro;
+        while(proximoOffset != -1){
+            arquivoListaInvertida.seekg(proximoOffset);
+            string linha;
+            string delimitador = "|";
+            getline(arquivoListaInvertida,linha);
+            string offsetDaPalavraString = linha.substr(0, linha.find(delimitador));
+            linha.erase(0, linha.find(delimitador) + delimitador.length());
+            string proximoOffsetString = linha.substr(0, linha.find(delimitador));
+
+            int offsetDaPalavra = stoi(offsetDaPalavraString);
+            proximoOffset = stoi(proximoOffsetString);
+            listaOffsets.insert(listaOffsets.end(),offsetDaPalavra);
+            *quantidade = *quantidade + 1;
+        }
+
+        offsets = (int*)malloc(sizeof(int)*listaOffsets.size());
+        copy(listaOffsets.begin(),listaOffsets.end(),offsets);
+        arquivoListaInvertida.seekg(posicaoAtual);
         return offsets;
     }
 private:
-    map<int,int> mapListaInvertida;
+    fstream arquivoListaInvertida;
     map<string,int> mapIndiceSecundario;
 };
 
