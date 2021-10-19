@@ -38,7 +38,7 @@ int btree::computarTaxaOcupacao() {
 int btree::insereRecursao(int chave, int indicePg){
     pagina *pg = lePagina(indicePg);
     //pagina nao cheia
-    if(pg->ponteiros[0] == -1){
+    if(pg->ponteiros[0] == -1){ //Caso o primeiro dado dos ponteiros seja -1, o noh eh folha
         int i = pg->numeroElementos-1;
         if(chave > pg->chaves[i]){ // e maior que o ultimo valor da pagina? entao insere no final
             pg->chaves[i+1] = chave;
@@ -58,6 +58,8 @@ int btree::insereRecursao(int chave, int indicePg){
         return 0;
     }else{
         //Recursao caso precise inserir em uma das folhas
+        //Faz um loop para ver em qual folha sera inserido, comparando o valor com a chave
+        //Na folha que sera inserido, chama essa funcao passando o numero da pagina da folha
         //Retorna 0 caso seja inserido com sucesso
         //Caso o valor tenha que ser inserido na raiz, retorna 1
     }
@@ -120,21 +122,6 @@ void btree::insereChave(int chave, int offsetRegistro) {
         }
         
     }
-    //ja existem paginas na arvore
-    
-    
-    // caso a pagina esteja cheia
-    // se (cabecalhoArvore.paginaRaiz == 1) entao raiz eh a unica pagina. Ler raiz, inserir e salvar. Senao...
-            // Exemplo:
-            // pagina *pg = lePagina(cabecalhoArvore.paginaRaiz);
-            // adicionar <chave,offsetRegistro> na pagina pg
-            // salvar pagina: salvaPagina(pg->numeroPagina, pg);
-
-    // senao...
-
-    // ler pagina raiz: pagina *pg = lePagina(cabecalhoArvore.paginaRaiz);
-
-    // se inserir, atualizar cabecalho
 }
 void btree::removeChave(int chave) {
 
