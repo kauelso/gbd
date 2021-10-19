@@ -38,31 +38,34 @@ int btree::computarTaxaOcupacao() {
 int btree::insereRecursao(int chave, int indicePg){
     pagina *pg = lePagina(indicePg);
     //pagina nao cheia
-    if(pg->ponteiros[0] == -1){ //Caso o primeiro dado dos ponteiros seja -1, o noh eh folha
-        int i = pg->numeroElementos-1;
-        if(chave > pg->chaves[i]){ // e maior que o ultimo valor da pagina? entao insere no final
-            pg->chaves[i+1] = chave;
-        }
-        else{ 
-            pg->chaves[i+1] = pg->chaves[i];  //se nao move todos para frente ate colocar na posicao correta
-            while(pg->chaves[i] > chave){
-                pg->chaves[i] = pg->chaves[i-1];
-                i--;
+        if(pg->ponteiros[0] == -1){ //Caso o primeiro dado dos ponteiros seja -1, o noh eh folha
+            if(pg->numeroElementos == ORDEM){
+                //Dividir nó e inserir o elemento
             }
-            pg->chaves[i+1] = chave;
-        }
+            int i = pg->numeroElementos-1;
+            if(chave > pg->chaves[i]){ // e maior que o ultimo valor da pagina? entao insere no final
+                pg->chaves[i+1] = chave;
+            }
+            else{ 
+                pg->chaves[i+1] = pg->chaves[i];  //se nao move todos para frente ate colocar na posicao correta
+                while(pg->chaves[i] > chave){
+                    pg->chaves[i] = pg->chaves[i-1];
+                    i--;
+                }
+                pg->chaves[i+1] = chave;
+            }
 
-        pg->numeroElementos = pg->numeroElementos + 1;
-        salvaPagina(cabecalhoArvore.paginaRaiz, pg);
-        salvaCabecalho();
-        return 0;
-    }else{
-        //Recursao caso precise inserir em uma das folhas
-        //Faz um loop para ver em qual folha sera inserido, comparando o valor com a chave
-        //Na folha que sera inserido, chama essa funcao passando o numero da pagina da folha
-        //Retorna 0 caso seja inserido com sucesso
-        //Caso o valor tenha que ser inserido na raiz, retorna 1
-    }
+            pg->numeroElementos = pg->numeroElementos + 1;
+            salvaPagina(cabecalhoArvore.paginaRaiz, pg);
+            salvaCabecalho();
+            return 0;
+        }else{
+            //Recursao caso precise inserir em uma das folhas
+            //Faz um loop para ver em qual folha sera inserido, comparando o valor com a chave
+            //Na folha que sera inserido, chama essa funcao passando o numero da pagina da folha
+            //Retorna 0 caso seja inserido com sucesso
+            //Caso o valor tenha que ser inserido na raiz, retorna 1
+        }
 }
 
 void btree::insereChave(int chave, int offsetRegistro) {
@@ -81,47 +84,7 @@ void btree::insereChave(int chave, int offsetRegistro) {
         salvaCabecalho();
         return;
     }
-    else{
-        pagina *pg = lePagina(cabecalhoArvore.paginaRaiz);
-        if(pg->numeroElementos < ORDEM )
-            insereRecursao(chave,cabecalhoArvore.paginaRaiz);
-        else{
-            //o elemento do meio
-            int elemento1fica = pg->chaves[(ORDEM-1)/2];
-            //o ultimo elemento
-            int elemento2fica = pg->chaves[ORDEM-1];
-
-            // criacao das 2 novas paginas
-            int indice1;
-            pagina *novaPagina1 = novaPagina(&indice1);
-            int indice2;
-            pagina *novaPagina2 = novaPagina(&indice2);
-
-            //insere comeco das chaves ate a metade em uma nova pagina 1
-            for(int i=0; i <= (ORDEM-1)/2;i++){
-                novaPagina1->chaves[i] = pg->chaves[i];
-                novaPagina1->numeroElementos = novaPagina1->numeroElementos + 1;
-            }
-            //insere metade das chaves ate a ultima em uma nova pagina 2
-            for(int i=(ORDEM+1)/2; i < ORDEM-1;i++){
-                novaPagina2->chaves[i-elemento1fica] = pg->chaves[i];
-                novaPagina2->numeroElementos = novaPagina2->numeroElementos + 1;
-            }
-
-            //pagina raiz ficaria assim
-            pg->chaves[0] = elemento1fica;
-            pg->ponteiros[0] = indice1;
-            //pg.ponteiros[0] = novaPagina1;
-            pg->chaves[1] = elemento2fica;
-            pg->ponteiros[1] = indice2;
-            //pg.ponteiros[1] = novaPagina2;
-            pg->numeroElementos = 2;
-
-            // altura da arvore aumentada
-            cabecalhoArvore.alturaArvore++;
-        }
-        
-    }
+    insereRecursao(chave,cabecalhoArvore.paginaRaiz);
 }
 void btree::removeChave(int chave) {
 
