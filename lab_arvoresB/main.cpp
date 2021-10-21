@@ -1,6 +1,9 @@
 /*
- * ALUNO: COLOQUE SEU NOME AQUI
  * File:   main.cpp
+ * Integrantes:
+ * Kauê Lucas Silvério Oliveira - 11821BCC007
+ * Guilherme de Castro Berti - 11821BCC023
+ * Yan Stivaletti e Souza - 11821BCC002
  */
 
 #include <stdlib.h>

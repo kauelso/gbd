@@ -1,7 +1,16 @@
+/*
+ * File:   main.cpp
+ * Integrantes:
+ * Kauê Lucas Silvério Oliveira - 11821BCC007
+ * Guilherme de Castro Berti - 11821BCC023
+ * Yan Stivaletti e Souza - 11821BCC002
+ */
+
 #include "btree.h"
 
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <list>
 
 bool fileExists(const char *filename) { struct stat statBuf; if (stat(filename,&statBuf) < 0) return false; return true; }
 
@@ -35,120 +44,249 @@ int btree::computarTaxaOcupacao() {
     return 0;
 }
 
-int btree::insereRecursao(int chave, int indicePg){
-    pagina *pg = lePagina(indicePg);
-    //pagina nao cheia
-        if(pg->ponteiros[0] == -1){ //Caso o primeiro dado dos ponteiros seja -1, o noh eh folha
-            if(pg->numeroElementos == ORDEM){
-                //Dividir no e inserir o elemento
-                //o elemento do meio
-                int elementomeio = pg->chaves[(ORDEM-1)/2];
-
-                // cria��o de 1 nova pagina
-                int indice3;
-                //pagina *novaPagina1 = novaPagina(indice3);
-
-                //metade das chaves na pagina nova
-                for(int i=0;i<=(ORDEM-1)/2;i++){
-                    novaPagina1->chaves[i] = pg->chaves[i];
-                    novaPagina1->numeroElementos++;
-                }
-
-                //removendo todas chaves que foram transferidas
-                for(int i=0;i<=(ORDEM-1)/2;i++){
-                    for(int j=0;j<=pg->numeroElementos;j++){
-                        pg->chaves[j] = pg->chaves[j+1];
-                    }
-                }
-                pg->numeroElementos = (ORDEM-1)/2;
-                // fim da divisao
-
-
-                // insercao na nova
-                if(chave < novaPagina1->chave[novaPagina1->numeroElementos-1]){
-                    *pg = *novaPagina1;     //trato novapagina1 como pg para facilitar o codigo
-                    // igual inserir em folha vazia
-                    int i = pg->numeroElementos-1;
-                    if(chave > pg->chaves[i]){ // e maior que o ultimo valor da pagina? entao insere no final
-                        pg->chaves[i+1] = chave;
-                    }
-                    else{   //se n�o move todos para frente ate colocar na posicao correta
-                        while(pg->chaves[i] > chave){
-                            pg->chaves[i] = pg->chaves[i-1];
-                            i--;
-                        }
-                        pg->chaves[i+1] = chave;
-                    }
-                    pg->numeroElementos+1;
-                }
-                //insercao na ja existente
-                else{
-                    // igual inserir em folha vazia
-                    int i = pg->numeroElementos-1;
-                    if(chave > pg->chaves[i]){ // � maior que o ultimo valor da pagina? ent�o insere no final
-                        pg->chaves[i+1] = chave;
-                    }
-                    else{   //se n�o move todos para frente at� colocar na posi��o correta
-                        while(pg->chaves[i] > chave){
-                            pg->chaves[i] = pg->chaves[i-1];
-                            i--;
-                        }
-                        pg->chaves[i+1] = chave;
-                    }
-                    pg->numeroElementos+1;
-                }
-
-                
-
-
-
-
-
-            }
-            int i = pg->numeroElementos-1;
-            if(chave > pg->chaves[i]){ // e maior que o ultimo valor da pagina? entao insere no final
-                pg->chaves[i+1] = chave;
-            }
-            else{ 
-                pg->chaves[i+1] = pg->chaves[i];  //se nao move todos para frente ate colocar na posicao correta
-                while(pg->chaves[i] > chave){
-                    pg->chaves[i] = pg->chaves[i-1];
-                    i--;
-                }
-                pg->chaves[i+1] = chave;
-            }
-
-            pg->numeroElementos = pg->numeroElementos + 1;
-            salvaPagina(cabecalhoArvore.paginaRaiz, pg);
-            salvaCabecalho();
-            return 0;
-        }else{
-            //Recursao caso precise inserir em uma das folhas
-            //Faz um loop para ver em qual folha sera inserido, comparando o valor com a chave
-            //Na folha que sera inserido, chama essa funcao passando o numero da pagina da folha
-            //Retorna 0 caso seja inserido com sucesso
-            //Caso o valor tenha que ser inserido na raiz, retorna 1
-        }
-}
-
 void btree::insereChave(int chave, int offsetRegistro) {
     // cabecalho contem o numero da pagina raiz
     leCabecalho();
-    //if s� tiver a pagina raiz
-    if(cabecalhoArvore.paginaRaiz == -1){ //Nao existem paginas na arvore
-        int indicePagina;
-        pagina *raiz = novaPagina(&indicePagina);
 
-        raiz->chaves[raiz->numeroElementos] = chave;
+    if(cabecalhoArvore.paginaRaiz == -1){
+        int indice;
+        pagina *pg = novaPagina(&indice);
 
+        pg->chaves[pg->numeroElementos] = chave;
+        pg->ponteiros[pg->numeroElementos] = offsetRegistro;
+
+        pg->numeroElementos = pg->numeroElementos + 1;
         cabecalhoArvore.numeroElementos++;
-        cabecalhoArvore.paginaRaiz = indicePagina;
-        salvaPagina(indicePagina,raiz);
+        cabecalhoArvore.alturaArvore++;
+        cabecalhoArvore.paginaRaiz = indice;
+
+        salvaPagina(indice,pg);
         salvaCabecalho();
         return;
     }
-    insereRecursao(chave,cabecalhoArvore.paginaRaiz);
+    //if s� tiver a pagina raiz
+    if(cabecalhoArvore.paginaRaiz == 1){
+        pagina *pg = lePagina(cabecalhoArvore.paginaRaiz);
+        //pagina n�o cheia
+        if(pg->numeroElementos < ORDEM){
+            int i = pg->numeroElementos-1;
+            if(chave > pg->chaves[i]){ // � maior que o ultimo valor da pagina? ent�o insere no final
+                pg->chaves[i+1] = chave;
+                pg->ponteiros[i+1] = offsetRegistro;
+            }
+            else{   //se n�o move todos para frente at� colocar na posi��o correta
+                while(pg->chaves[i] > chave){
+                    pg->chaves[i+1] = pg->chaves[i];
+                    pg->ponteiros[i+1] = pg->ponteiros[i];
+                    i--;
+                }
+                pg->chaves[i+1] = chave;
+                pg->ponteiros[i+1] = offsetRegistro;
+            }
+        }
+        // caso a pagina esteja cheia
+        else{
+            // criacao das 2 novas paginas
+            //--------------------------------- raiz deixara de ser nó folha
+            int indice1;
+            pagina *novaPagina1 = novaPagina(&indice1);
+            //--------------------------------- no folha novo
+            int indice2;
+            pagina *novaPagina2 = novaPagina(&indice2);
+            //--------------------------------- no folha novo
+
+            //insere comeco das chaves ate a metade em uma nova pagina 1
+            for(int i=0; i <= (ORDEM-1)/2;i++){
+                novaPagina1->chaves[i] = pg->chaves[i];
+                novaPagina1->ponteiros[i] = pg->ponteiros[i];
+                novaPagina1->numeroElementos = novaPagina1->numeroElementos + 1;
+            }
+            //insete metade das chaves ate a ultima em uma nova pagina 2
+            for(int i=(ORDEM+1)/2; i < ORDEM-1;i++){
+                novaPagina2->chaves[i-(ORDEM+1)/2] = pg->chaves[i];
+                novaPagina2->ponteiros[i-(ORDEM+1)/2] = pg->ponteiros[i];
+                novaPagina2->numeroElementos = novaPagina2->numeroElementos + 1;
+            }
+
+            //insercao em uma das novas pagina
+            if(chave < novaPagina1->chaves[novaPagina1->numeroElementos-1]){
+                // igual inserir em folha vazia
+                int i = novaPagina1->numeroElementos-1;
+                if(chave > novaPagina1->chaves[i]){ // maior que o ultimo valor da pagina? ent�o insere no final
+                    novaPagina1->chaves[i+1] = chave;
+                    novaPagina1->ponteiros[i+1] = offsetRegistro;
+                }
+                else{   //se nao move todos para frente ate colocar na posicao correta
+                    while(novaPagina1->chaves[i] > chave){
+                        novaPagina1->chaves[i+1] = novaPagina1->chaves[i];
+                        novaPagina1->ponteiros[i+1] = novaPagina1->ponteiros[i];
+                        i--;
+                    }
+                    novaPagina1->chaves[i+1] = chave;
+                    novaPagina1->ponteiros[i+1] = offsetRegistro;
+                }
+                
+                novaPagina1->numeroElementos = novaPagina1->numeroElementos + 1;
+                salvaPagina(indice1,novaPagina1);
+            }
+            else{
+                // igual inserir em folha vazia
+                int i = novaPagina2->numeroElementos-1;
+                if(chave > novaPagina2->chaves[i]){ // maior que o ultimo valor da pagina? ent�o insere no final
+                    novaPagina2->chaves[i+1] = chave;
+                    novaPagina2->ponteiros[i+1] = offsetRegistro;
+                }
+                else{   //se nao move todos para frente ate colocar na posicao correta
+                    while(novaPagina2->chaves[i] > chave){
+                        novaPagina2->chaves[i+1] = novaPagina2->chaves[i];
+                        novaPagina2->ponteiros[i+1] = novaPagina2->ponteiros[i];
+                        i--;
+                    }
+                    novaPagina2->chaves[i+1] = chave;
+                    novaPagina2->ponteiros[i+1] = offsetRegistro;
+                }
+                novaPagina2->numeroElementos = novaPagina2->numeroElementos + 1;
+                salvaPagina(indice2,novaPagina2);
+            }
+
+            //pagina raiz ficaria assim
+            pg->chaves[0] = novaPagina1->chaves[novaPagina1->numeroElementos-1];
+            pg->ponteiros[0] = indice1;
+
+            pg->chaves[1] = novaPagina2->chaves[novaPagina1->numeroElementos-1];
+            pg->ponteiros[1] = indice2;
+           
+            pg->numeroElementos = 2;
+
+            // altura da arvore almentada
+            cabecalhoArvore.alturaArvore = cabecalhoArvore.alturaArvore + 1;
+            salvaCabecalho();
+            salvaPagina(cabecalhoArvore.paginaRaiz,pg);
+        }
+    }
+    // caso n�o tiver somente a pagina raiz
+    else{
+        int altura = 1;
+        pagina *pg = lePagina(cabecalhoArvore.paginaRaiz);
+        pagina *pganterior = lePagina(cabecalhoArvore.paginaRaiz);
+        // vai ate a pagina folha
+        int proximapag;
+        while(altura != cabecalhoArvore.alturaArvore){
+            if(chave>pg->chaves[pg->numeroElementos-1]){ //caso chave seja a maior insercao ja vai trocando o ultimo valor ate chegar na pagina folha
+                proximapag = pg->ponteiros[pg->numeroElementos-1];
+                pg->chaves[pg->numeroElementos-1] = chave;
+            }
+            else{
+                for(int i=0;i < pg->numeroElementos;i++){
+                    if(chave<pg->chaves[i]){
+                        proximapag = pg->ponteiros[i];
+                        i = ORDEM; // BREAK;
+                    }
+                }
+            }
+            pagina *pg = lePagina(proximapag);
+            altura++;
+        }
+
+        // pagina nao cheia
+        if(pg->numeroElementos < ORDEM){
+            int i = pg->numeroElementos-1;
+            if(chave > pg->chaves[i]){ // � maior que o ultimo valor da pagina? ent�o insere no final
+                pg->chaves[i+1] = chave;
+                pg->ponteiros[i+1] = offsetRegistro;
+            }
+            else{   //se n�o move todos para frente at� colocar na posi��o correta
+                while(pg->chaves[i] > chave){
+                    pg->chaves[i+1] = pg->chaves[i];
+                    pg->ponteiros[i+1] = pg->chaves[i];
+                    i--;
+                }
+                pg->chaves[i+1] = chave;
+                pg->ponteiros[i+1] = offsetRegistro;
+            }
+            pg->numeroElementos = pg->numeroElementos + 1;
+            salvaPagina(cabecalhoArvore.paginaRaiz,pg);
+            salvaCabecalho();
+        }
+        // pagina folha cheia
+        else{
+            //o elemento do meio
+            int elementomeio = pg->chaves[(ORDEM-1)/2];
+
+            // criacao de 1 nova pagina
+            int indice3;
+            pagina *novaPagina1 = novaPagina(&indice3);
+            //------------ criacao de uma nova folha
+
+            //metade das chaves na pagina nova
+            for(int i=0;i<=(ORDEM-1)/2;i++){
+                novaPagina1->chaves[i] = pg->chaves[i];
+                novaPagina1->ponteiros[i] = pg->ponteiros[i];
+                novaPagina1->numeroElementos = novaPagina1->numeroElementos + 1;
+            }
+
+            //removendo todas chaves que foram transferidas
+            for(int i=0;i<=(ORDEM-1)/2;i++){
+                for(int j=0;j<=pg->numeroElementos;j++){
+                    pg->chaves[j] = pg->chaves[j+1];
+                    pg->ponteiros[j] = pg->ponteiros[j+1];
+                }
+            }
+            pg->numeroElementos = (ORDEM-1)/2;
+
+
+
+            //chave ser inserida na pagina nova ou na que ja existe
+            // insercao na nova
+            if(chave < novaPagina1->chaves[novaPagina1->numeroElementos-1]){
+                // igual inserir em folha vazia
+                int i = novaPagina1->numeroElementos-1;
+                if(chave > novaPagina1->chaves[i]){ // e maior que o ultimo valor da pagina? ent�o insere no final
+                    novaPagina1->chaves[i+1] = chave;
+                    novaPagina1->ponteiros[i+1] = offsetRegistro;
+                }
+                else{   //se nao move todos para frente ate colocar na posicao correta
+                    while(novaPagina1->chaves[i] > chave){
+                        novaPagina1->chaves[i+1] = novaPagina1->chaves[i];
+                        novaPagina1->ponteiros[i+1] = novaPagina1->ponteiros[i];
+                        i--;
+                    }
+                    novaPagina1->chaves[i+1] = chave;
+                    novaPagina1->ponteiros[i+1] = offsetRegistro;
+                }
+                novaPagina1->numeroElementos = novaPagina1->numeroElementos + 1;
+                salvaPagina(indice3,novaPagina1);
+            }
+            //insercao na ja existente
+            else{
+                // igual inserir em folha vazia
+                int i = pg->numeroElementos-1;
+                if(chave > pg->chaves[i]){ // � maior que o ultimo valor da pagina? ent�o insere no final
+                    pg->chaves[i+1] = chave;
+                    pg->chaves[i+1] = offsetRegistro;
+                }
+                else{   //se n�o move todos para frente at� colocar na posi��o correta
+                    while(pg->chaves[i] > chave){
+                        pg->chaves[i+1] = pg->chaves[i];
+                        pg->ponteiros[i+1] = pg->ponteiros[i];
+                        i--;
+                    }
+                    pg->chaves[i+1] = chave;
+                    pg->chaves[i+1] = offsetRegistro;
+                }
+                pg->numeroElementos = pg->numeroElementos+1;
+                salvaPagina(proximapag,pg);
+            }
+
+            chave = novaPagina1->chaves[novaPagina1->numeroElementos-1];
+            insereRecursao(pganterior->numeroPagina,chave,indice3);
+        }
+    }
+
+    cabecalhoArvore.numeroElementos++;
+    salvaCabecalho();
 }
+
 void btree::removeChave(int chave) {
 
     // se remover, atualizar cabecalho
@@ -159,7 +297,227 @@ void btree::removeChave(int chave) {
 }
 
 int btree::buscaChave(int chave) {
-    // caso n�o encontrar chave, retornar -1
+    if(cabecalhoArvore.paginaRaiz =! -1){
+        pagina *pg = lePagina(cabecalhoArvore.paginaRaiz);
+        if(cabecalhoArvore.alturaArvore == 1){
+            for(int i = 0; i < pg->numeroElementos;i++){
+                if(pg->chaves[i] == chave) return pg->ponteiros[i];
+            }
+        }else{
+            int altura = 1;
+            while(altura <= cabecalhoArvore.alturaArvore){
+                for(int i = 0; i < pg->numeroElementos;i++){
+                    if(chave < pg->chaves[i]){
+                        if(altura == cabecalhoArvore.alturaArvore) return -1;
+                        pg = lePagina(pg->ponteiros[i]);
+                        break;
+                    }else if(chave == pg->chaves[i] && altura == cabecalhoArvore.alturaArvore)
+                        return pg->ponteiros[i];
+                    else if(chave == pg->chaves[i]){
+                        pg = lePagina(pg->ponteiros[i]);
+                        break;
+                    }
+                }
+                altura++;
+            }
+        }
+    }
     return -1;
 }
 
+
+//buscaPagina = pagina anterior para colocar o valor que subiu
+//chave = o valor que subiu para colocar na pagina anterior
+//ponteirobewpag = o valor da pagina que foi criada com o slit
+int btree::insereRecursao(int buscaPagina,int chave,int ponteiroNewPag){
+    leCabecalho();
+
+    if(buscaPagina == cabecalhoArvore.paginaRaiz){
+        pagina *pg = lePagina(cabecalhoArvore.paginaRaiz);
+        //pagina nao cheia
+        if(pg->numeroElementos < ORDEM){
+            int i = pg->numeroElementos-1;
+            
+           while(pg->chaves[i] > chave){
+                pg->chaves[i+1] = pg->chaves[i];
+                pg->ponteiros[i+1] = pg->ponteiros[i];
+                i--;
+            }
+            pg->chaves[i+1] = chave;
+            pg->numeroElementos = pg->numeroElementos + 1;
+            pg->ponteiros[i+1] = ponteiroNewPag;
+        }
+        // caso a pagina esteja cheia
+        else{
+
+            // criacao das 2 novas paginas
+            int indice1;
+            pagina *novaPagina1 = novaPagina(&indice1);
+            //------------- cricao de pagina interna (nao folha)
+            int indice2;
+            pagina *novaPagina2 = novaPagina(&indice2);
+            //------------- cricao de pagina interna (nao folha)
+
+
+            //insere comeco das chaves ate a metade em uma nova pagina 1
+            for(int i=0; i <= (ORDEM-1)/2;i++){
+                novaPagina1->chaves[i] = pg->chaves[i];
+                novaPagina1->numeroElementos = novaPagina1->numeroElementos + 1;
+                novaPagina1->ponteiros[i] = pg->ponteiros[i];
+            }
+            //insete metade das chaves at� a ultima em uma nova pagina 2
+            for(int i=(ORDEM+1)/2; i < ORDEM-1;i++){
+                novaPagina2->chaves[i-(ORDEM+1)/2] = pg->chaves[i];
+                novaPagina2->numeroElementos = novaPagina2->numeroElementos + 1;
+                novaPagina2->ponteiros[i] = pg->ponteiros[i];
+            }
+
+            //insercao em uma das novas pagina
+            if(chave < novaPagina1->chaves[novaPagina1->numeroElementos-1]){
+                // igual inserir em folha vazia
+                int i = novaPagina1->numeroElementos-1;
+                if(chave > novaPagina1->chaves[i]){ // maior que o ultimo valor da pagina? ent�o insere no final
+                    novaPagina1->chaves[i+1] = chave;
+                    novaPagina1->ponteiros[i+1] = ponteiroNewPag;
+                }
+                else{   //se nao move todos para frente ate colocar na posicao correta
+                    while(novaPagina1->chaves[i] > chave){
+                        novaPagina1->chaves[i+1] = novaPagina1->chaves[i];
+                        novaPagina1->ponteiros[i+1] = novaPagina1->ponteiros[i];
+                        i--;
+                    }
+                    novaPagina1->chaves[i+1] = chave;
+                    novaPagina1->ponteiros[i+1] = ponteiroNewPag;
+                }
+                novaPagina1->numeroElementos = novaPagina1->numeroElementos + 1;
+            }
+            else{
+                // igual inserir em folha vazia
+                int i = novaPagina2->numeroElementos-1;
+                if(chave > novaPagina2->chaves[i]){ // maior que o ultimo valor da pagina? ent�o insere no final
+                    novaPagina2->chaves[i+1] = chave;
+                    novaPagina2->ponteiros[i+1] = ponteiroNewPag;
+                }
+                else{   //se nao move todos para frente ate colocar na posicao correta
+                    while(novaPagina2->chaves[i] > chave){
+                        novaPagina2->chaves[i+1] = novaPagina2->chaves[i];
+                        novaPagina2->ponteiros[i+1] = novaPagina2->ponteiros[i];
+                        i--;
+                    }
+                    novaPagina2->chaves[i+1] = chave;
+                     novaPagina2->ponteiros[i+1] = ponteiroNewPag;
+                }
+                novaPagina2->numeroElementos = novaPagina2->numeroElementos + 1;
+            }
+            
+
+            //pagina raiz ficaria assim
+            pg->chaves[0] = novaPagina1->chaves[novaPagina1->numeroElementos-1];
+            pg->ponteiros[0] = indice1;
+
+            pg->chaves[1] = novaPagina2->chaves[novaPagina1->numeroElementos-1];
+            pg->ponteiros[1] = indice2;
+           
+            pg->numeroElementos = 2;
+
+            // altura da arvore almentada
+            cabecalhoArvore.alturaArvore = cabecalhoArvore.alturaArvore + 1;
+        }
+    }
+    else{
+        pagina *pg = lePagina(cabecalhoArvore.paginaRaiz);
+        pagina *pganterior = lePagina(cabecalhoArvore.paginaRaiz);
+        // vai ate a pagina folha
+        while(buscaPagina != pg->numeroPagina){
+            int proximapag;
+            for(int i=0;i < pg->numeroElementos;i++){
+                if(chave<pg->chaves[i]){
+                    proximapag = pg->ponteiros[i];
+                    i = ORDEM; // BREAK;
+                }
+            }
+            *pganterior = *pg;
+            pagina *pg = lePagina(proximapag);
+        }
+
+        // pagina nao cheia
+        if(pg->numeroElementos < ORDEM){
+            int i = pg->numeroElementos-1;
+            //move todos para frente at� colocar na posi��o correta
+            while(pg->chaves[i] > chave){
+                pg->chaves[i+1] = pg->chaves[i];
+                pg->ponteiros[i+1] = pg->ponteiros[i];
+                i--;
+            }
+            pg->chaves[i+1] = chave;
+            pg->ponteiros[i+1] = ponteiroNewPag;
+            pg->numeroElementos = pg->numeroElementos + 1;
+        }
+
+
+        else{
+            //o elemento do meio
+            int elementomeio = pg->chaves[(ORDEM-1)/2];
+
+            // criacao de 1 nova pagina
+            int indice3;
+            pagina *novaPagina1 = novaPagina(&indice3);
+            //------------- cricao de pagina interna (nao folha)
+
+            //metade das chaves na pagina nova
+            for(int i=0;i<=(ORDEM-1)/2;i++){
+                novaPagina1->chaves[i] = pg->chaves[i];
+                novaPagina1->ponteiros[i] = pg->ponteiros[i];
+                novaPagina1->numeroElementos = novaPagina1->numeroElementos + 1;
+            }
+
+            //removendo todas chaves que foram transferidas
+            for(int i=0;i<=(ORDEM-1)/2;i++){
+                for(int j=0;j<=pg->numeroElementos;j++){
+                    pg->chaves[j] = pg->chaves[j+1];
+                    pg->ponteiros[j] = pg->ponteiros[j+1];
+                }
+            }
+            pg->numeroElementos = (ORDEM-1)/2;
+
+
+
+            //chave ser inserida na pagina nova ou na que ja existe
+            // insercao na nova
+            if(chave < novaPagina1->chaves[novaPagina1->numeroElementos-1]){
+                // igual inserir em folha vazia
+                int i = novaPagina1->numeroElementos-1;
+                //move todos para frente at� colocar na posi��o correta
+                while(novaPagina1->chaves[i] > chave){
+                    novaPagina1->chaves[i+1] = novaPagina1->chaves[i];
+                    novaPagina1->ponteiros[i+1] = novaPagina1->ponteiros[i];
+                    i--;
+                }
+                novaPagina1->chaves[i+1] = chave;
+                novaPagina1->ponteiros[i+1] = ponteiroNewPag;
+                    
+                novaPagina1->numeroElementos = novaPagina1->numeroElementos + 1;
+            }
+            //insercao na ja existente
+            else{
+                // igual inserir em folha vazia
+                int i = pg->numeroElementos-1;
+                //se nao move todos para frente at� colocar na posi��o correta
+                while(pg->chaves[i] > chave){
+                    pg->chaves[i+1] = pg->chaves[i];
+                    pg->ponteiros[i+1] = pg->ponteiros[i];
+                    i--;
+                }
+                pg->chaves[i+1] = chave;
+                pg->ponteiros[i+1] = ponteiroNewPag;
+                
+                pg->numeroElementos = pg->numeroElementos + 1;
+            }
+
+            chave = novaPagina1->chaves[novaPagina1->numeroElementos-1];
+            insereRecursao(pganterior->numeroPagina,chave,indice3);
+        
+
+    }
+    }
+}

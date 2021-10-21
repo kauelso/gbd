@@ -113,7 +113,6 @@ private:
         cabecalhoArvore.numeroPaginas++;
         salvaCabecalho();
         pg->numeroPagina = cabecalhoArvore.numeroPaginas;
-        pg->ponteiros[0] = -1;
         idPagina[0] = cabecalhoArvore.numeroPaginas;
         return pg;
     }
@@ -152,7 +151,7 @@ private:
         fread(&cabecalhoArvore,sizeof(cabecalhoArvore),1,arquivo);
     }
 
-    int insereRecursao(int chave, int indicePg);
+    int insereRecursao(int buscaPagina,int chave,int ponteiroNewPag);
 };
 
 #endif	/* _BTREE_H */
